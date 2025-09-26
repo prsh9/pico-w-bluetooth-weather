@@ -1,0 +1,193 @@
+<html>
+
+<head>
+  <title>Temperature - Demo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://code.jquery.com/jquery-1.11.3.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.17/d3.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/epoch-charting@0.8.4/dist/js/epoch.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/epoch-charting@0.8.4/dist/css/epoch.min.css">
+</head>
+
+<body>
+  <h1>Temperature Demo</h1>
+
+  <div class="container">
+    <p>Enter Service UUID</p>
+    <input id="service-uuid" value="0094b196-ffb7-48bd-b5ea-18bf7e5a6dba" size="40" />
+  </div>
+
+  <div class="container">
+    <p>Once you've set your UUIDs (above), click the button below to connect to your peripheral and see the advertised
+      characteristics:</p>
+    <button type="button" id="connect" onclick="connectClicked()">Connect</button>
+    <button type="button" id="disconnect" onclick="disconnectClicked()">Disconnect</button>
+    <br />
+    <div>
+      Discovered characteristics:
+      <ul id="characteristics" class="hidden"></ul>
+    </div>
+  </div>
+
+  <div class="container">
+    Once you've connected (above), and if you've enabled the READ characteristic on your BLE service, clicking the below
+    button should show an alert with the characteristic values:
+    <br />
+    <p>Enter Temp Characteristic UUID (This will be read for plotting the temperature)</p>
+    <input id="temp-char-uuid" value="712f3291-7523-4cc2-879a-7babd68153d4" size="40" />
+    <br />
+    <br />
+    <button id="read" onclick="readClicked()">Plot Temperature</button>
+    <button id="stopread" disabled onclick="stopReading()">Stop</button>
+    <br/>
+    <br />
+    <div id="realtimeLineChart" style="width: 800px; height: 300px;" class="epoch category10"></div>
+  </div>
+
+  <script type='text/javascript'>
+    // Initial data for the chart
+    var lineChartData = [
+      {
+        label: "Temperature",
+        values: []
+      }
+    ];
+
+    // Initialize the chart
+    var chart = $('#realtimeLineChart').epoch({
+      type: 'time.line',
+      data: lineChartData,
+      axes: ['left', 'bottom'],
+      range: [0, 100]
+    });
+
+    let intervalId;
+    let characteristics = {};
+    let tempCharacteristics = null;
+    let device = null;
+
+    document.getElementById("disconnect").disabled = true
+
+    function initChart() {
+      if(chart) {
+        chart.clear();
+      }
+
+      chart = $('#realtimeLineChart').epoch({
+        type: 'time.line',
+        data: lineChartData,
+        axes: ['left', 'bottom'],
+        range: [0, 100]
+      });
+    }
+
+    async function connectClicked() {
+      await connect();
+
+      const characteristicListElement = document.getElementById('characteristics');
+
+      if (Object.keys(characteristics).length) {
+        characteristicListElement.classList.remove('hidden');
+        document.getElementById("disconnect").disabled = false
+        document.getElementById("connect").disabled = true
+      }
+      else { 
+        characteristicListElement.classList.add('hidden');
+        document.getElementById("disconnect").disabled = true
+        document.getElementById("connect").disabled = false
+      }
+
+      characteristicListElement.innerHTML = '';
+      Object.entries(characteristics)?.forEach(([uuidOrName, characteristic]) => {
+        const node = document.createElement('li');
+        node.innerText = `[${uuidOrName}] - ${characteristic.properties.read ? 'readable' : 'not readable'}, ${characteristic.properties.write ? 'writable' : 'not writable'}`;
+        characteristicListElement.append(node);
+      });
+    }
+
+    async function connect() {
+      const serviceUuid = document.getElementById('service-uuid').value;
+      device = await navigator.bluetooth.requestDevice({
+        filters: [
+            {
+            namePrefix: 'Pico',
+            services: [serviceUuid],
+            }
+        ],
+      });
+      device.addEventListener('gattserverdisconnected', (e) => {
+        disconnectClicked()
+      });
+
+      const server = await device.gatt.connect();
+      const service = await server.getPrimaryService(serviceUuid);
+      const discoveredCharacteristics = await service.getCharacteristics();
+
+      characteristics = {};
+      discoveredCharacteristics.forEach(characteristic => {
+        characteristics[characteristic.uuid] = characteristic;
+      });
+      console.log(characteristics);
+    }
+
+    function startReading() {
+      initChart();
+      intervalId ??= setInterval(read, 1000);
+      document.getElementById("stopread").disabled = false
+      document.getElementById("read").disabled = true
+    }
+
+    function stopReading() {
+      clearInterval(intervalId)
+      intervalId = null
+      document.getElementById("read").disabled = false
+      document.getElementById("stopread").disabled = true
+    }
+
+    async function read() {
+      const decoder = new TextDecoder('utf-8');
+      const temp = decoder.decode(await tempCharacteristics.readValue());
+      var now = Date.now() / 1000; // Current time in seconds (Epoch time)
+      chart.push([
+        {
+          time: now,
+          y: parseFloat(temp)
+        }
+      ])
+    }
+    
+    async function readClicked() {
+      if (!characteristics || Object.keys(characteristics).length == 0) await connect();
+
+      const tempCharUuid = document.getElementById('temp-char-uuid').value;
+      if(characteristics[tempCharUuid] && characteristics[tempCharUuid].properties.read) {
+        tempCharacteristics = characteristics[tempCharUuid];
+        startReading();
+      }
+      else {
+        console.log("Error");
+        window.alert("Error");
+      }
+    }
+
+    async function disconnectClicked() {
+      initChart();
+      stopReading();
+
+      characteristics = {};
+      tempCharacteristics = null;
+
+      if(device) {
+        localDevice = device;
+        device = null;
+        localDevice.gatt.disconnect();
+      }
+
+      document.getElementById("disconnect").disabled = true
+      document.getElementById("connect").disabled = false
+    }
+  </script>
+</body>
+
+</html>
+
