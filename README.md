@@ -8,7 +8,7 @@ See it in action
 <video src="./images/temp_example.mp4" controls width="600">
   Your browser does not support the video tag.
 </video>
-[](./images/temp_example.mp4)
+![](./images/temp.gif)
 
 ## Steps to Run:
 
