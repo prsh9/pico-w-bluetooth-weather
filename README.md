@@ -5,18 +5,25 @@ pico-w-bluetooth-weather
 Welcome to Pico W tutorial
 
 See it in action
-![](./images/temp.gif)
+![](./images/temp_example.mp4)
 
-Steps to Run:
 
-- Pico W
-    - Connect to pico w
-    - Install Micropython
-    - Upload the files in the `pico` directory to the microcontroller
-    - Restart the device
-    - (Optional) Start main.py
+## Steps to Run:
 
-- PC
-    - Enable Bluetooth
-    - Open `local\tempPlotter.html` in Chrome (or any other bluetooth browser)
-    - Follow the steps mentioned on the webpage
+### Pico W
+
+There are 2 ways to run. Using low level library or using high level library. The steps for the deployment for both are similar.
+One is available in `src\bluetooth_way` and the other is `src\aioble_way`
+
+Steps
+- Connect to pico w via Thonny
+- Install Micropython
+- Upload the files in the `src\<pico>` directory to the microcontroller (see above).
+- (Optional) Start main.py
+- Restart the device
+
+
+### PC
+- Enable Bluetooth
+- Open `src\local\tempPlotter.html` in Chrome (or any other web-bluetooth supported browser)
+- Follow the steps mentioned on the webpage
