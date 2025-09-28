@@ -5,8 +5,10 @@ pico-w-bluetooth-weather
 Welcome to Pico W tutorial
 
 See it in action
-![](./images/temp_example.mp4)
-
+<video src="./images/temp_example.mp4" controls width="600">
+  Your browser does not support the video tag.
+</video>
+[](./images/temp_example.mp4)
 
 ## Steps to Run:
 
